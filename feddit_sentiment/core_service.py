@@ -7,10 +7,12 @@ JSON output in an initial implementation.
 """
 from fastapi import APIRouter
 
+from feddit_sentiment.config import API_VERSION
+
 router = APIRouter()
 
 
-@router.get("/api/v1/comments")
+@router.get(f"/api/{API_VERSION}/comments")
 async def get_comments_sentiment(subfeddit: str) -> dict:
     """Get subfeddit comments and analyze sentiment.
 

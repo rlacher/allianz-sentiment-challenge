@@ -5,12 +5,23 @@ from fastapi import FastAPI
 import uvicorn
 
 from feddit_sentiment.core_service import router
+from feddit_sentiment.config import (
+    APP_VERSION,
+    API_HOST,
+    API_PORT,
+    RELOAD_MODE
+)
 
 # Initialise application
-app = FastAPI(title="Feddit Sentiment API", version="1.0.0")
+app = FastAPI(title="Feddit Sentiment API", version=APP_VERSION)
 
 # Register router
 app.include_router(router)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(
+        app,
+        host=API_HOST,
+        port=API_PORT,
+        reload=RELOAD_MODE
+    )
