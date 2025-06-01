@@ -5,6 +5,7 @@
 Fetches comments from Feddit, applies sentiment classification, and returns
 JSON output in an initial implementation.
 """
+import logging
 import requests
 from requests.exceptions import RequestException
 from json import JSONDecodeError
@@ -19,7 +20,9 @@ from feddit_sentiment.config import (
 )
 
 MAX_COMMENTS_TO_FETCH = 25
+MAX_COMMENT_PRINT_LENGTH = 30
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -43,9 +46,10 @@ def get_comments_sentiment(subfeddit_title: str) -> dict:
     )
 
     if subfeddit_id is None:
+        logger.warning(f"Subfeddit '{subfeddit_title}' not found.")
         raise HTTPException(
             status_code=404,
-            detail=f"Subfeddit {subfeddit_title} not found"
+            detail=f"Subfeddit '{subfeddit_title}' not found"
         )
 
     comments = _fetch_comments(subfeddit_id)
@@ -62,6 +66,11 @@ def get_comments_sentiment(subfeddit_title: str) -> dict:
             "polarity": polarity_score,
             "sentiment": "positive" if polarity_score > 0 else "negative"
         })
+
+    logger.info(
+        f"Completed sentiment analysis for {len(sentiment_results)} comments "
+        f"from subfeddit '{subfeddit_title}'."
+    )
 
     return {
         "title": subfeddit_title,
@@ -86,11 +95,18 @@ def _fetch_subfeddits() -> list:
         response.raise_for_status()
         data = response.json()
         subfeddits = data.get('subfeddits', [])
+
+        logger.info(f"Fetched {len(subfeddits)} subfeddits")
+
         return subfeddits
     except RequestException as request_exception:
+        logger.warning("Failed to get subfeddits", exc_info=True)
         raise ValueError("Failed to get subfeddits") from request_exception
     except JSONDecodeError as json_error:
-        raise ValueError("Invalid JSON response") from json_error
+        logger.warning("Invalid JSON response for subfeddits", exc_info=True)
+        raise ValueError(
+            "Invalid JSON response for subfeddits"
+        ) from json_error
 
 
 def _fetch_comments(subfeddit_id: int) -> list:
@@ -117,11 +133,19 @@ def _fetch_comments(subfeddit_id: int) -> list:
         response.raise_for_status()
         data = response.json()
         comments = data.get('comments', [])
+
+        logger.info(
+            f"Fetched {len(comments)} comments "
+            f"for subfeddit with id {subfeddit_id}"
+        )
+
         return comments
     except RequestException as request_exception:
+        logger.warning("Failed to get comments", exc_info=True)
         raise ValueError("Failed to get comments") from request_exception
     except JSONDecodeError as json_error:
-        raise ValueError("Invalid JSON response") from json_error
+        logger.warning("Invalid JSON response for comments", exc_info=True)
+        raise ValueError("Invalid JSON response for comments") from json_error
 
 
 def _analyse_comment(
@@ -145,4 +169,11 @@ def _analyse_comment(
 
     scores = analyser.polarity_scores(comment_text)
     compound_score = scores.get('compound')
+
+    logger.debug(
+        f"Polarity score {compound_score:.2f} "
+        f"for text: {comment_text[:MAX_COMMENT_PRINT_LENGTH]}"
+        f"{"..." if len(comment_text) >= MAX_COMMENT_PRINT_LENGTH else ""}"
+    )
+
     return compound_score

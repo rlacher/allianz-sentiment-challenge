@@ -16,3 +16,7 @@ API_HOST = getenv("API_HOST", DEFAULT_HOST)
 API_PORT = int(getenv("API_PORT", DEFAULT_PORT))
 FEDDIT_HOST = getenv("FEDDIT_HOST", DEFAULT_HOST)
 FEDDIT_PORT = int(getenv("FEDDIT_PORT", 8080))
+
+# Logging
+LOGGING_LEVEL = "DEBUG"
+LOGGING_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"

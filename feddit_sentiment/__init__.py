@@ -2,7 +2,19 @@
 # Copyright (c) 2025 René Lacher
 """Feddit Sentiment API
 
-A microservice that fetches user comments from the mock social media platform
-Feddit, applies sentiment classification using an external library, and
-returns a structured JSON response.
+Initialises basic logging configuration.
 """
+import logging
+
+from feddit_sentiment import config
+
+
+def configure_logging() -> None:
+    """Set up basic console logging."""
+    logging.basicConfig(
+        level=config.LOGGING_LEVEL,
+        format=config.LOGGING_FORMAT
+    )
+
+
+configure_logging()
