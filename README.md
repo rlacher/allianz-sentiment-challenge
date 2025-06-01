@@ -1,16 +1,22 @@
 # Allianz Sentiment Challenge
 
-This microservice exposes a RESTful API for sentiment analysis of user comments from a mock social media platform, Feddit.
-Built using FastAPI, it fetches comments from a specified subfeddit, classifies each and returns a structured JSON response.
+<!-- Badges -->
+[![flake8](https://img.shields.io/github/actions/workflow/status/rlacher/allianz-sentiment-challenge/lint.yml?label=flake8&style=flat)](https://github.com/rlacher/allianz-sentiment-challenge/actions/workflows/lint.yml)
+[![pytest](https://img.shields.io/github/actions/workflow/status/rlacher/allianz-sentiment-challenge/test.yml?label=pytest&style=flat)](https://github.com/rlacher/allianz-sentiment-challenge/actions/workflows/test.yml)
+[![license](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://spdx.org/licenses/MIT.html)
+
+A FastAPI microservice exposing sentiment analysis on user comments from a mock social platform, Feddit. It fetches comments from a specified subfeddit, classifies their sentiment, and returns structured JSON results.
 
 > **Note:** This project serves as a technical submission for the Allianz Machine Learning Engineer challenge.
 
 ## Key Features
 
-- **Fetch Comments:** Retrieves 25 comments from a given subfeddit.
-- **Analyse Sentiment:** Uses a sentiment model to classify each comment as *positive* or *negative*.
-- **FastAPI-Based:** Built with a lightweight, high-performant RESTful API framework.
-- **Structured Output:** Returns comment text, polarity scores and sentiment classification in JSON format.
+- **Fetch Comments:** Retrieves 25 comments from a specified subfeddit.
+- **Analyse Sentiment:** Classifies comments as *positive* or *negative* using a sentiment model.
+- **Structured Output:** Returns comment text, polarity scores and sentiment labels in JSON format.
+- **FastAPI-Based:** Built with a lightweight, high-performance RESTful API framework.
+- **Automated Tests:** Include integration tests to verify core API functions.
+- **CI Integration:** Runs linting and tests automatically on every commit for code quality assurance.
 
 ## Setup
 
@@ -81,6 +87,25 @@ curl -X GET "http://localhost:8000/api/v1/comments?subfeddit_title=Dummy%20Topic
 ```
 
 Additional comments were omitted from the comments array for readability in this example.
+
+## Documentation
+
+Comprehensive Python docstrings are included throughout the codebase for clarity and maintainability.
+
+The project automatically generates an interactive OpenAPI reference via Swagger UI, accessible at ```http://localhost:8000/docs``` when running the service locally.
+
+## Test
+
+Basic automated integration tests verify core API functionality.
+Tests cover key functional paths due to the time-constrained scope of this challenge.
+
+Run the following from the project root to execute the test suite with an inlined coverage report:
+
+```bash
+pytest --cov=feddit_sentiment --cov-branch tests/
+```
+
+The report shows statement and branch coverage.
 
 ## License
 
