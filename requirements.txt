@@ -2,3 +2,8 @@ fastapi
 uvicorn[standard]
 pre-commit
 flake8
+requests
+vaderSentiment
+pytest
+pytest-cov
+httpx

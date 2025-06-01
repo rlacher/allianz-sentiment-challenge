@@ -8,8 +8,7 @@ from feddit_sentiment.core_service import router
 from feddit_sentiment.config import (
     APP_VERSION,
     API_HOST,
-    API_PORT,
-    RELOAD_MODE
+    API_PORT
 )
 
 # Initialise application
@@ -22,6 +21,5 @@ if __name__ == "__main__":
     uvicorn.run(
         app,
         host=API_HOST,
-        port=API_PORT,
-        reload=RELOAD_MODE
+        port=API_PORT
     )

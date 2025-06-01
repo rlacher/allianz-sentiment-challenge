@@ -14,4 +14,5 @@ DEFAULT_PORT = 8000
 # Environment overrides
 API_HOST = getenv("API_HOST", DEFAULT_HOST)
 API_PORT = int(getenv("API_PORT", DEFAULT_PORT))
-RELOAD_MODE = True
+FEDDIT_HOST = getenv("FEDDIT_HOST", DEFAULT_HOST)
+FEDDIT_PORT = int(getenv("FEDDIT_PORT", 8080))
