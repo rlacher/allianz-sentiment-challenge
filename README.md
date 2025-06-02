@@ -67,18 +67,27 @@ curl -X GET "http://localhost:8000/api/v1/comments?subfeddit_title=Dummy%20Topic
 
 ```json
 {
-  "title":"Dummy Topic 1",
-  "limit":25,
+  "subfeddit": {
+    "id": 1,
+    "title": "Dummy Topic 1"
+  },
+  "comment_count": 25,
+  "sort": {
+    "key": "created_at",
+    "order": "desc"
+  },
   "comments": [
     {
-      "id": "12345",
+      "id": 12345,
       "text": "This is amazing!",
+      "created_at": 1748871983,
       "polarity": 0.9,
       "sentiment": "positive"
     },
     {
-      "id": "67890",
-      "text": "I hate this!",
+      "id": 67890,
+      "text": "Hate it!",
+      "created_at": 1748871984,
       "polarity": -0.8,
       "sentiment": "negative"
     }
