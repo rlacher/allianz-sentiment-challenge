@@ -60,19 +60,7 @@ def get_comments_sentiment(subfeddit_title: str) -> dict:
 
     recent_comments = comments[:NUM_RECENT_COMMENTS]
 
-    analyser = SentimentIntensityAnalyzer()
-    sentiment_results = []
-    for comment in recent_comments:
-        comment_text = comment.get('text')
-        polarity_score = _analyse_comment(analyser, comment_text)
-
-        sentiment_results.append({
-            "id": comment.get('id'),
-            "text": comment_text,
-            "created_at": comment.get('created_at'),
-            "polarity": polarity_score,
-            "sentiment": "positive" if polarity_score > 0 else "negative"
-        })
+    sentiment_results = _process_comments(recent_comments)
 
     logger.info(
         f"Completed sentiment analysis for {len(sentiment_results)} comments "
@@ -120,7 +108,7 @@ def _fetch_all_comments_exhaustively(subfeddit_id: int) -> list:
     """Exhaustively fetches all comments from subfeddit by id.
 
     Paginates to retrieve all comments from the Feddit API that only
-    supports 'limit' and 'skip' query parameters.
+    supports `limit` and `skip` query parameters.
 
     Args:
         subfeddit_id: The subfeddit's id.
@@ -186,6 +174,53 @@ def _fetch_all_comments_exhaustively(subfeddit_id: int) -> list:
     return all_comments
 
 
+def _process_comments(comments: list) -> list:
+    """Enriches comments with polarity score and sentiment label.
+
+    Iterates over a list of comment dictionaries and enriches each with a
+    sentiment polarity and label by calling `_analyse_comment()`.
+
+    Args:
+        comments: A list of comment dictionaries, each containing meta data.
+    Returns:
+        A list of enriched comments with added `polarity` and `sentiment`
+        fields.
+    Raises:
+        TypeError: If `comments` is not a list.
+        ValueError: If any comment is missing a mandatory field.
+    """
+    if not isinstance(comments, list):
+        raise TypeError("Comments must be of list type")
+
+    analyser = SentimentIntensityAnalyzer()
+    results = []
+
+    for i, comment in enumerate(comments):
+        try:
+            comment_id = comment['id']
+            text = comment['text']
+            created_at = comment['created_at']
+
+            polarity_score = _analyse_comment(analyser, text)
+
+            results.append({
+                "id": comment_id,
+                "text": text,
+                "created_at": created_at,
+                "polarity": polarity_score,
+                "sentiment": "positive" if polarity_score > 0 else "negative"
+            })
+        except KeyError as key_error:
+            error_message = (
+                f"Comment at index {i} is missing a mandatory field: "
+                f"{key_error}."
+            )
+            logger.warning(error_message)
+            raise ValueError(error_message) from key_error
+
+    return results
+
+
 def _analyse_comment(
         analyser: SentimentIntensityAnalyzer,
         comment_text: str) -> float:
@@ -197,8 +232,8 @@ def _analyse_comment(
     Returns:
         A polarity score from -1 to 1.
     Raises:
-        TypeError: If comment_text is not a string.
-        ValueError: If comment_text is a blank string.
+        TypeError: If `comment_text` is not a string.
+        ValueError: If `comment_text` is a blank string.
     """
     if not isinstance(comment_text, str):
         raise TypeError("Comment must be of type str")
@@ -236,7 +271,7 @@ def _create_output_structure(
         A structured dictionary containing subfeddit metadata, sorting info,
         and sentiment-labelled comments.
     Raises:
-        TypeError: If 'subfeddit_id' is not an integer or 'subfeddit_title'
+        TypeError: If `subfeddit_id` is not an integer or `subfeddit_title`
         is not a string.
     """
     if not isinstance(subfeddit_id, int):
