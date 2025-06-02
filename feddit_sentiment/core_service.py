@@ -19,7 +19,8 @@ from feddit_sentiment.config import (
     FEDDIT_PORT
 )
 
-MAX_COMMENTS_TO_FETCH = 25
+COMMENTS_PER_REQUEST = 500
+NUM_RECENT_COMMENTS = 25
 MAX_COMMENT_PRINT_LENGTH = 30
 
 logger = logging.getLogger(__name__)
@@ -33,8 +34,8 @@ def get_comments_sentiment(subfeddit_title: str) -> dict:
     Args:
         subfeddit_title: The subfeddit's title.
     Returns:
-        Dictionary containing the subfeddit title, comment limit,
-        and a list of comments with sentiment scores.
+        Dictionary containing the subfeddit title, comment limit
+        and a list of the most recent comments with sentiment scores.
     Raises:
         HTTPException: If the subfeddit does not exist.
     """
@@ -52,17 +53,23 @@ def get_comments_sentiment(subfeddit_title: str) -> dict:
             detail=f"Subfeddit '{subfeddit_title}' not found"
         )
 
-    comments = _fetch_comments(subfeddit_id)
+    comments = _fetch_all_comments_exhaustively(subfeddit_id)
+
+    # Sort comments in-place by creation timestamp descending
+    comments.sort(key=lambda comment: comment["created_at"], reverse=True)
+
+    recent_comments = comments[:NUM_RECENT_COMMENTS]
 
     analyser = SentimentIntensityAnalyzer()
     sentiment_results = []
-    for comment in comments:
+    for comment in recent_comments:
         comment_text = comment.get('text')
         polarity_score = _analyse_comment(analyser, comment_text)
 
         sentiment_results.append({
             "id": comment.get('id'),
             "text": comment_text,
+            "created_at": comment.get('created_at'),
             "polarity": polarity_score,
             "sentiment": "positive" if polarity_score > 0 else "negative"
         })
@@ -74,7 +81,7 @@ def get_comments_sentiment(subfeddit_title: str) -> dict:
 
     return {
         "title": subfeddit_title,
-        "limit": MAX_COMMENTS_TO_FETCH,
+        "limit": NUM_RECENT_COMMENTS,
         "comments": sentiment_results
     }
 
@@ -109,43 +116,74 @@ def _fetch_subfeddits() -> list:
         ) from json_error
 
 
-def _fetch_comments(subfeddit_id: int) -> list:
-    """Retieves comments from the subfeddit by id.
+def _fetch_all_comments_exhaustively(subfeddit_id: int) -> list:
+    """Exhaustively fetches all comments from subfeddit by id.
+
+    Paginates to retrieve all comments from the Feddit API that only
+    supports 'limit' and 'skip' query parameters.
 
     Args:
         subfeddit_id: The subfeddit's id.
     Returns:
-        A list of comments for the subfeddit.
+        A list of all comments for the subfeddit.
     Raises:
         TypeError: If subfeddit_id is not an integer.
         ValueError: If the HTTP request fails or if the API response body
         is not valid JSON.
     """
-    # Fetch oldest comments for now
     if not isinstance(subfeddit_id, int):
         raise TypeError("Subfeddit ID must be of type int")
 
+    # Built-in list has O(1) resize/append complexity
+    all_comments = []
+    skip_offset = 0
+
     url = f"http://{FEDDIT_HOST}:{FEDDIT_PORT}/api/v1/comments"
-    params = {"subfeddit_id": subfeddit_id, "limit": MAX_COMMENTS_TO_FETCH}
+    params = {
+        "subfeddit_id": subfeddit_id,
+        "limit": COMMENTS_PER_REQUEST
+    }
 
-    try:
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-        comments = data.get('comments', [])
+    while True:
+        try:
+            params["skip"] = skip_offset
+            response = requests.get(url, params)
 
-        logger.info(
-            f"Fetched {len(comments)} comments "
-            f"for subfeddit with id {subfeddit_id}"
-        )
+            response.raise_for_status()
+            data = response.json()
+            comments = data.get('comments', [])
+            num_comments = len(comments)
 
-        return comments
-    except RequestException as request_exception:
-        logger.warning("Failed to get comments", exc_info=True)
-        raise ValueError("Failed to get comments") from request_exception
-    except JSONDecodeError as json_error:
-        logger.warning("Invalid JSON response for comments", exc_info=True)
-        raise ValueError("Invalid JSON response for comments") from json_error
+            logger.debug(
+                f"Fetched {num_comments} comments "
+                f"for subfeddit with id {subfeddit_id}, "
+                f"skipping {skip_offset}"
+            )
+
+            all_comments.extend(comments)
+
+            if num_comments < COMMENTS_PER_REQUEST:
+                logger.info(
+                    f"Fetched all {len(all_comments)} comments "
+                    f"for subfeddit with id {subfeddit_id}"
+                )
+                break
+            else:
+                skip_offset += COMMENTS_PER_REQUEST
+
+        except RequestException as request_exception:
+            logger.warning("Failed to get comments", exc_info=True)
+            raise ValueError("Failed to get comments") from request_exception
+        except JSONDecodeError as json_error:
+            logger.warning(
+                "Invalid JSON response for comments",
+                exc_info=True
+            )
+            raise ValueError(
+                "Invalid JSON response for comments"
+            ) from json_error
+
+    return all_comments
 
 
 def _analyse_comment(

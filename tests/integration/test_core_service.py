@@ -16,14 +16,14 @@ class TestGetCommentsSentiment:
 
     @pytest.fixture
     def client(self) -> TestClient:
-        """Initialises and retuns the test client."""
+        """Initialises and returns the test client."""
         return TestClient(app)
 
     @pytest.fixture
     def valid_subfeddit(self) -> dict:
         """Returns a valid subfeddit as dictionary."""
         return {"subfeddits": [
-            {"id": 1, "title": TestGetCommentsSentiment.SUBFEDDIT_TITLE}
+            {"id": 1, "title": self.SUBFEDDIT_TITLE}
         ]}
 
     @pytest.fixture
@@ -31,8 +31,16 @@ class TestGetCommentsSentiment:
         """Returns a valid dictionary of comments."""
         return {
             "comments": [
-                {"id": 101, "text": "I love this post!"},
-                {"id": 102, "text": "Terrible idea, not impressed."}
+                {
+                    "id": 101,
+                    "text": "I love this post!",
+                    "created_at": 1748857600
+                },
+                {
+                    "id": 102,
+                    "text": "Terrible idea, not impressed.",
+                    "created_at": 1748857610
+                }
             ]
         }
 
@@ -55,7 +63,7 @@ class TestGetCommentsSentiment:
         mock_comments_response.raise_for_status.return_value = None
         mock_comments_response.json.return_value = valid_comments
 
-        # Patch sequential calls to requests.get
+        # Simulate sequential calls
         mock_get.side_effect = [
             mock_subfeddits_response,
             mock_comments_response
@@ -64,20 +72,24 @@ class TestGetCommentsSentiment:
         response = client.get(
             f"/api/{API_VERSION}/comments",
             params={
-                "subfeddit_title": TestGetCommentsSentiment.SUBFEDDIT_TITLE
+                "subfeddit_title": self.SUBFEDDIT_TITLE
             }
         )
 
         assert response.status_code == 200, "Expected 200 OK from endpoint"
         data = response.json()
 
-        assert data["title"] == TestGetCommentsSentiment.SUBFEDDIT_TITLE, \
+        assert data["title"] == self.SUBFEDDIT_TITLE, \
             "Expected correct title"
         assert isinstance(data["comments"], list), "Expected comments as list"
-        assert len(data["comments"]) == 2, \
+        comments = data["comments"]
+
+        assert len(comments) == 2, \
             "Expected 2 mocked comments returned"
 
-        for comment in data["comments"]:
+        for comment in comments:
+            assert comment["id"] in {101, 102}, "Unexpected comment ID"
+            assert "text" in comment, "Comment missing 'text' field"
             assert "polarity" in comment, "Expected polarity score field"
             assert isinstance(comment["polarity"], float), \
                 "Expected polarity score to be a float"
@@ -85,6 +97,49 @@ class TestGetCommentsSentiment:
                 "Expected polarity score within valid range"
             assert comment["sentiment"] in {"positive", "negative"}, \
                 "Invalid sentiment value"
+
+        for i in range(len(comments)-1):
+            curr_created_at = comments[i]["created_at"]
+            next_created_at = comments[i+1]["created_at"]
+            assert curr_created_at >= next_created_at, \
+                f"Comments not sorted in descending order at index {i}"
+
+    @patch("feddit_sentiment.core_service.requests.get")
+    def test_subfeddit_with_no_comments_returns_empty_list(
+        self,
+        mock_get: Mock,
+        client: TestClient,
+        valid_subfeddit: dict
+    ):
+        """Should return empty comments list if subfeddit has no comments."""
+
+        # Mock /subfeddits response
+        mock_subfeddits_response = Mock()
+        mock_subfeddits_response.raise_for_status.return_value = None
+        mock_subfeddits_response.json.return_value = valid_subfeddit
+
+        # Mock /comments response (empty)
+        mock_comments_response = Mock()
+        mock_comments_response.raise_for_status.return_value = None
+        mock_comments_response.json.return_value = {"comments": []}
+
+        # Simulate sequential calls
+        mock_get.side_effect = [
+            mock_subfeddits_response,
+            mock_comments_response
+        ]
+
+        response = client.get(
+            f"/api/{API_VERSION}/comments",
+            params={"subfeddit_title": self.SUBFEDDIT_TITLE}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["title"] == self.SUBFEDDIT_TITLE
+        assert isinstance(data["comments"], list)
+        assert data["comments"] == [], "Expected empty comments list"
 
     @patch("feddit_sentiment.core_service.requests.get")
     def test_invalid_subfeddit_returns_404(

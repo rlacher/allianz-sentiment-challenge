@@ -18,5 +18,5 @@ FEDDIT_HOST = getenv("FEDDIT_HOST", DEFAULT_HOST)
 FEDDIT_PORT = int(getenv("FEDDIT_PORT", 8080))
 
 # Logging
-LOGGING_LEVEL = "DEBUG"
+LOGGING_LEVEL = "INFO"
 LOGGING_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
