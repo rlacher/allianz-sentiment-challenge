@@ -79,13 +79,20 @@ class TestGetCommentsSentiment:
         assert response.status_code == 200, "Expected 200 OK from endpoint"
         data = response.json()
 
-        assert data["title"] == self.SUBFEDDIT_TITLE, \
-            "Expected correct title"
+        assert data["subfeddit"]["title"] == self.SUBFEDDIT_TITLE, \
+            "Expected correct subfeddit title"
         assert isinstance(data["comments"], list), "Expected comments as list"
-        comments = data["comments"]
 
-        assert len(comments) == 2, \
-            "Expected 2 mocked comments returned"
+        assert data["comment_count"] == 2, \
+            "Expected comment count to match number of comments"
+
+        assert data["sort"] == {
+            "key": "created_at",
+            "order": "desc"
+        }, "Expected correct hardcoded sort metadata"
+
+        comments = data["comments"]
+        assert len(comments) == 2, "Expected 2 mocked comments returned"
 
         for comment in comments:
             assert comment["id"] in {101, 102}, "Unexpected comment ID"
@@ -98,9 +105,9 @@ class TestGetCommentsSentiment:
             assert comment["sentiment"] in {"positive", "negative"}, \
                 "Invalid sentiment value"
 
-        for i in range(len(comments)-1):
+        for i in range(len(comments) - 1):
             curr_created_at = comments[i]["created_at"]
-            next_created_at = comments[i+1]["created_at"]
+            next_created_at = comments[i + 1]["created_at"]
             assert curr_created_at >= next_created_at, \
                 f"Comments not sorted in descending order at index {i}"
 
@@ -137,9 +144,10 @@ class TestGetCommentsSentiment:
         assert response.status_code == 200
         data = response.json()
 
-        assert data["title"] == self.SUBFEDDIT_TITLE
+        assert data["subfeddit"]["title"] == self.SUBFEDDIT_TITLE
         assert isinstance(data["comments"], list)
         assert data["comments"] == [], "Expected empty comments list"
+        assert data["comment_count"] == 0, "Expected comment count of 0"
 
     @patch("feddit_sentiment.core_service.requests.get")
     def test_invalid_subfeddit_returns_404(

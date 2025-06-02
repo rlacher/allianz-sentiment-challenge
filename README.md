@@ -11,7 +11,7 @@ A FastAPI microservice exposing sentiment analysis on user comments from a mock 
 
 ## Key Features
 
-- **Fetch Comments:** Retrieves 25 comments from a specified subfeddit.
+- **Fetch Comments:** Retrieves the 25 most recent comments from a specified subfeddit.
 - **Analyse Sentiment:** Classifies comments as *positive* or *negative* using a sentiment model.
 - **Structured Output:** Returns comment text, polarity scores and sentiment labels in JSON format.
 - **FastAPI-Based:** Built with a lightweight, high-performance RESTful API framework.
@@ -106,6 +106,12 @@ pytest --cov=feddit_sentiment --cov-branch tests/
 ```
 
 The report shows statement and branch coverage.
+
+## Technical Notes
+
+The API returns the 25 most recent comments as required.
+Internally, all comments are fetched via paginated requests to ensure complete data retrieval.
+Comments are sorted by `created_at` in descending order before limiting the output.
 
 ## License
 

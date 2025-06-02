@@ -79,11 +79,11 @@ def get_comments_sentiment(subfeddit_title: str) -> dict:
         f"from subfeddit '{subfeddit_title}'."
     )
 
-    return {
-        "title": subfeddit_title,
-        "limit": NUM_RECENT_COMMENTS,
-        "comments": sentiment_results
-    }
+    return _create_output_structure(
+        subfeddit_id,
+        subfeddit_title,
+        sentiment_results
+    )
 
 
 def _fetch_subfeddits() -> list:
@@ -215,3 +215,44 @@ def _analyse_comment(
     )
 
     return compound_score
+
+
+def _create_output_structure(
+        subfeddit_id: int,
+        subfeddit_title: str,
+        sentiment_results: list
+) -> dict:
+    """Maps meta and comment data into output dictionary.
+
+    Information regarding sorting is hardcoded for the "created_at" field
+    in descending order.
+
+    Args:
+        subfeddit_id: The subfeddit's unique id.
+        subfeddit_title: The subfeddit's title.
+        sentiment_results: A list of comments, each with a polarity score
+        and sentiment label.
+    Returns:
+        A structured dictionary containing subfeddit metadata, sorting info,
+        and sentiment-labelled comments.
+    Raises:
+        TypeError: If 'subfeddit_id' is not an integer or 'subfeddit_title'
+        is not a string.
+    """
+    if not isinstance(subfeddit_id, int):
+        raise TypeError("Subfeddit ID must be of type int")
+    if not isinstance(subfeddit_title, str):
+        raise TypeError("Subfeddit title must be of type string")
+
+    return {
+        "subfeddit": {
+            "id": subfeddit_id,
+            "title": subfeddit_title
+        },
+        "comment_count": len(sentiment_results),
+        "sort": {
+            "key": "created_at",
+            "order": "desc"
+        },
+        "comments": sentiment_results
+    }
