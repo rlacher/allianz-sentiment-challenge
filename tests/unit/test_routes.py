@@ -7,6 +7,7 @@ from unittest.mock import patch
 from fastapi import HTTPException
 
 from feddit_sentiment.routes import get_comments_sentiment
+from feddit_sentiment.schemas import CommentQueryParams
 
 
 @pytest.fixture
@@ -35,7 +36,8 @@ def test_get_comments_sentiment_happy_path(
         sample_enriched_comments, subfeddit_id
     )
 
-    response = get_comments_sentiment(subfeddit_title)
+    query = CommentQueryParams(subfeddit_title=subfeddit_title)
+    response = get_comments_sentiment(query)
 
     assert response == {
         "subfeddit": {"id": subfeddit_id, "title": subfeddit_title},
@@ -43,6 +45,34 @@ def test_get_comments_sentiment_happy_path(
         "sort": {"key": "created_at", "order": "desc"},
         "comments": sample_enriched_comments
     }
+
+
+@patch("feddit_sentiment.service.get_enriched_comments")
+def test_get_comments_sentiment_with_polarity_sort(
+    mock_get_enriched_comments,
+    sample_enriched_comments
+):
+    """Checks sort metadata for polarity sort order."""
+    subfeddit_title = "TechNews"
+    subfeddit_id = 1
+    sort_order = "asc"
+    mock_get_enriched_comments.return_value = (
+        sample_enriched_comments, subfeddit_id
+    )
+
+    query = CommentQueryParams(
+        subfeddit_title=subfeddit_title,
+        polarity_sort_order=sort_order
+    )
+    response = get_comments_sentiment(query)
+
+    assert response["subfeddit"] == {
+        "id": subfeddit_id,
+        "title": subfeddit_title
+    }
+    assert response["comment_count"] == len(sample_enriched_comments)
+    assert response["sort"] == {"key": "polarity", "order": sort_order}
+    assert response["comments"] == sample_enriched_comments
 
 
 @pytest.mark.parametrize("exception_message", [
@@ -57,7 +87,8 @@ def test_get_comments_sentiment_subfeddit_not_found(
     mock_get_enriched_comments.side_effect = ValueError(exception_message)
 
     with pytest.raises(HTTPException) as exc_info:
-        get_comments_sentiment("TechNews")
+        query = CommentQueryParams(subfeddit_title="TechNews")
+        get_comments_sentiment(query)
 
     assert exc_info.value.status_code == 404
     assert exception_message in str(exc_info.value.detail)

@@ -11,7 +11,7 @@ A FastAPI microservice exposing sentiment analysis on user comments from a mock 
 
 ## Key Features
 
-- **Fetch Comments:** Retrieves the 25 most recent comments from a specified subfeddit.
+- **Fetch Comments:** Retrieves the 25 most recent comments from a specified subfeddit, optionally sorted by polarity.
 - **Analyse Sentiment:** Classifies comments as *positive* or *negative* using a sentiment model.
 - **Structured Output:** Returns comment text, polarity scores and sentiment labels in JSON format.
 - **FastAPI-Based:** Built with a lightweight, high-performance RESTful API framework.
@@ -62,12 +62,12 @@ uvicorn main:app --reload
 ## API Usage
 
 Once running, the API is available at: `http://localhost:8000`.
-
 The service exposes a single GET endpoint at `/api/v1/comments`.
 
 ### Example Request
 
-Provide the query parameter `subfeddit_title` to specify the source (e.g. `Dummy Topic 1`).
+Provide the query parameter `subfeddit_title` to specify the source (e.g. `Dummy Topic 1`). 
+Optionally, add `polarity_sort_order` (`asc` or `desc`) to sort comments by sentiment polarity.
 
 ```bash
 curl -X GET "http://localhost:8000/api/v1/comments?subfeddit_title=Dummy%20Topic%201"

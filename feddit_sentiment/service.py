@@ -16,6 +16,7 @@ from feddit_sentiment.config import (
     FEDDIT_HOST,
     FEDDIT_PORT
 )
+from feddit_sentiment.schemas import SortOrder
 
 COMMENTS_PER_REQUEST = 500
 FEDDIT_BASE_PATH = f"http://{FEDDIT_HOST}:{FEDDIT_PORT}/api/v1"
@@ -26,13 +27,16 @@ logger = logging.getLogger(__name__)
 
 def get_enriched_comments(
         subfeddit_title: str,
-        limit: int
+        limit: int,
+        polarity_sort: SortOrder | None = None
 ) -> tuple[list[dict], int]:
-    """Fetches and processes comments from a subfeddit.
+    """Fetches, enriches and optionally sorts comments from a subfeddit.
 
     Args:
         subfeddit_title: The subfeddit's title.
         limit: The maximum number of comments to return.
+        polarity_sort: Optional polarity sort order applied to the
+        most recent comments.
     Returns:
         A list of enriched comments with sentiment polarity and label.
     Raises:
@@ -52,9 +56,17 @@ def get_enriched_comments(
     raw_comments = _fetch_all_comments_exhaustively(subfeddit_id)
 
     # Order comments by most recent first
-    raw_comments.sort(key=lambda comment: comment["created_at"], reverse=True)
+    raw_comments.sort(key=lambda c: c["created_at"], reverse=True)
 
-    return _enrich_comments(raw_comments[:limit]), subfeddit_id
+    enriched_comments = _enrich_comments(raw_comments[:limit])
+
+    if polarity_sort is not None:
+        enriched_comments = _sort_comments_by_polarity(
+            enriched_comments,
+            polarity_sort
+        )
+
+    return enriched_comments, subfeddit_id
 
 
 def _fetch_subfeddits() -> list:
@@ -269,3 +281,30 @@ def _analyse_comment(
     )
 
     return compound_score
+
+
+def _sort_comments_by_polarity(
+    comments: list[dict],
+    order: SortOrder
+) -> list[dict]:
+    """Sorts comments by polarity score.
+
+    Args:
+        comments: List of enriched comments.
+        order: SortOrder enum (asc or desc).
+    Returns:
+        A new list sorted by polarity.
+    """
+    reverse = (order == SortOrder.desc)
+    sorted_comments = sorted(
+        comments,
+        key=lambda c: c["polarity"],
+        reverse=reverse
+    )
+
+    logger.info(
+        f"Sorted {len(comments)} comments by polarity in "
+        f"{'descending' if reverse else 'ascending'} order"
+    )
+
+    return sorted_comments
