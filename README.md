@@ -16,14 +16,23 @@ A FastAPI microservice exposing sentiment analysis on user comments from a mock 
 - **Structured Output:** Returns comment text, polarity scores and sentiment labels in JSON format.
 - **FastAPI-Based:** Built with a lightweight, high-performance RESTful API framework.
 - **Modular Design:** Separates routing and service logic for clarity and testability.
+- **Containerised Setup:** Easily reproducible, isolated setup using Docker Compose.
 - **Automated Tests:** Includes unit and integration tests to strengthen API resilience.
 - **CI Integration:** Runs linting and tests automatically on every commit for code quality assurance.
 
-## Setup
+## Run with Docker (Recommended)
 
-Ensure Python 3.12+ is installed on your system.
+*Prerequisite:* Docker ≥ 23 is installed and running.
 
-### Installation
+Start the sentiment API along with its dependencies (Feddit and PostgreSQL) in a self-contained environment:
+
+```bash
+docker compose up --build
+```
+
+## Local Setup (Alternative)
+
+*Prerequisite:* Python 3.12+ is installed.
 
 Follow these steps to set up the project locally.
 
@@ -33,26 +42,26 @@ git clone https://github.com/rlacher/allianz-sentiment-challenge.git
 cd allianz-sentiment-challenge
 
 # Create and activate a virtual environment (recommended)
-python -m venv venv
+python3 -m venv venv
 source venv/bin/activate  # On Linux/macOS
 venv\Scripts\activate     # On Windows
 
 # Install dependencies
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 
 # Install Git pre-commit hooks
 pre-commit install
 ```
 
-### Run the API Server
+Run the API Server locally:
 
 ```bash
 uvicorn main:app --reload
 ```
 
-The server will be accessible at: `http://localhost:8000`.
-
 ## API Usage
+
+Once running, the API is available at: `http://localhost:8000`.
 
 The service exposes a single GET endpoint at `/api/v1/comments`.
 
@@ -102,7 +111,7 @@ Additional comments were omitted from the comments array for readability in this
 
 Comprehensive Python docstrings are included throughout the codebase for clarity and maintainability.
 
-The project automatically generates an interactive OpenAPI reference via Swagger UI, accessible at ```http://localhost:8000/docs``` when running the service locally.
+The project automatically generates an interactive OpenAPI reference via Swagger UI when running the service, accessible at: [http://localhost:8000/docs](http://localhost:8000/docs).
 
 ## Test
 
