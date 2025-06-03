@@ -1,8 +1,8 @@
 # Allianz Sentiment Challenge
 
 <!-- Badges -->
-[![flake8](https://img.shields.io/github/actions/workflow/status/rlacher/allianz-sentiment-challenge/lint.yml?label=flake8&style=flat)](https://github.com/rlacher/allianz-sentiment-challenge/actions/workflows/lint.yml)
-[![pytest](https://img.shields.io/github/actions/workflow/status/rlacher/allianz-sentiment-challenge/test.yml?label=pytest&style=flat)](https://github.com/rlacher/allianz-sentiment-challenge/actions/workflows/test.yml)
+[![flake8](https://img.shields.io/github/actions/workflow/status/rlacher/allianz-sentiment-challenge/lint.yaml?label=flake8&style=flat)](https://github.com/rlacher/allianz-sentiment-challenge/actions/workflows/lint.yaml)
+[![pytest](https://img.shields.io/github/actions/workflow/status/rlacher/allianz-sentiment-challenge/test.yaml?label=pytest&style=flat)](https://github.com/rlacher/allianz-sentiment-challenge/actions/workflows/test.yaml)
 [![license](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://spdx.org/licenses/MIT.html)
 
 A FastAPI microservice exposing sentiment analysis on user comments from a mock social platform, Feddit. It fetches comments from a specified subfeddit, classifies their sentiment, and returns structured JSON results.
@@ -15,7 +15,8 @@ A FastAPI microservice exposing sentiment analysis on user comments from a mock 
 - **Analyse Sentiment:** Classifies comments as *positive* or *negative* using a sentiment model.
 - **Structured Output:** Returns comment text, polarity scores and sentiment labels in JSON format.
 - **FastAPI-Based:** Built with a lightweight, high-performance RESTful API framework.
-- **Automated Tests:** Include integration tests to verify core API functions.
+- **Modular Design:** Separates routing and service logic for clarity and testability.
+- **Automated Tests:** Includes unit and integration tests to strengthen API resilience.
 - **CI Integration:** Runs linting and tests automatically on every commit for code quality assurance.
 
 ## Setup
@@ -105,8 +106,7 @@ The project automatically generates an interactive OpenAPI reference via Swagger
 
 ## Test
 
-Basic automated integration tests verify core API functionality.
-Tests cover key functional paths due to the time-constrained scope of this challenge.
+Unit and integration tests verify the API contract, focusing on critical functionality within the constraints of this challenge.
 
 Run the following from the project root to execute the test suite with an inlined coverage report:
 

@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025 René Lacher
+
 import pytest
 from unittest.mock import patch, Mock
 
@@ -12,7 +13,7 @@ from feddit_sentiment.config import API_VERSION
 class TestGetCommentsSentiment:
     """Integration tests with mocked external Feddit API requests."""
 
-    SUBFEDDIT_TITLE = "tech"
+    SUBFEDDIT_TITLE = "TechNews"
 
     @pytest.fixture
     def client(self) -> TestClient:
@@ -44,7 +45,7 @@ class TestGetCommentsSentiment:
             ]
         }
 
-    @patch("feddit_sentiment.core_service.requests.get")
+    @patch("feddit_sentiment.service.requests.get")
     def test_valid_subfeddit_returns_sentiments(
         self,
         mock_get: Mock,
@@ -111,7 +112,7 @@ class TestGetCommentsSentiment:
             assert curr_created_at >= next_created_at, \
                 f"Comments not sorted in descending order at index {i}"
 
-    @patch("feddit_sentiment.core_service.requests.get")
+    @patch("feddit_sentiment.service.requests.get")
     def test_subfeddit_with_no_comments_returns_empty_list(
         self,
         mock_get: Mock,
@@ -149,7 +150,7 @@ class TestGetCommentsSentiment:
         assert data["comments"] == [], "Expected empty comments list"
         assert data["comment_count"] == 0, "Expected comment count of 0"
 
-    @patch("feddit_sentiment.core_service.requests.get")
+    @patch("feddit_sentiment.service.requests.get")
     def test_invalid_subfeddit_returns_404(
         self,
         mock_get: Mock,
@@ -159,7 +160,7 @@ class TestGetCommentsSentiment:
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
         mock_response.json.return_value = {
-            "subfeddits": [{"id": 1, "title": "tech"}]
+            "subfeddits": [{"id": 1, "title": "TechNews"}]
         }
 
         mock_get.return_value = mock_response
