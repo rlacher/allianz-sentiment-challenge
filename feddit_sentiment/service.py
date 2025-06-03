@@ -202,7 +202,6 @@ def _enrich_comments(comments: list) -> list:
     if not isinstance(comments, list):
         raise TypeError("Comments must be of list type")
 
-    analyser = SentimentIntensityAnalyzer()
     results = []
 
     for i, comment in enumerate(comments):
@@ -211,7 +210,7 @@ def _enrich_comments(comments: list) -> list:
             text = comment['text']
             created_at = comment['created_at']
 
-            polarity_score = _analyse_comment(analyser, text)
+            polarity_score = _analyse_comment(text)
 
             results.append({
                 "id": comment_id,
@@ -235,9 +234,15 @@ def _enrich_comments(comments: list) -> list:
     return results
 
 
+def _get_analyser() -> SentimentIntensityAnalyzer:
+    """Provides a reusable SentimentIntensityAnalyzer instance."""
+    return SentimentIntensityAnalyzer()
+
+
 def _analyse_comment(
-        analyser: SentimentIntensityAnalyzer,
-        comment_text: str) -> float:
+        comment_text: str,
+        analyser: SentimentIntensityAnalyzer = _get_analyser()
+) -> float:
     """Analyses the sentiment of a comment.
 
     Args:
