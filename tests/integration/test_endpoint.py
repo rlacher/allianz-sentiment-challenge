@@ -53,14 +53,14 @@ def valid_comments() -> dict:
 
 def _make_mock_feddit_responses(valid_subfeddit: dict, valid_comments: dict):
     """Creates mock responses for subfeddit and comments API calls."""
-    mock_subfeddit_response = AsyncMock()
+    mock_subfeddit_response = Mock()
     mock_subfeddit_response.status_code = 200
-    mock_subfeddit_response.json = AsyncMock(return_value=valid_subfeddit)
+    mock_subfeddit_response.json.return_value = valid_subfeddit
     mock_subfeddit_response.raise_for_status = Mock()
 
-    mock_comments_response = AsyncMock()
+    mock_comments_response = Mock()
     mock_comments_response.status_code = 200
-    mock_comments_response.json = AsyncMock(return_value=valid_comments)
+    mock_comments_response.json.return_value = valid_comments
     mock_comments_response.raise_for_status = Mock()
 
     return [mock_subfeddit_response, mock_comments_response]
@@ -208,9 +208,9 @@ def test_invalid_subfeddit_returns_404(
     valid_subfeddit: dict
 ):
     """Should return 404 for unknown subfeddit title."""
-    mock_subfeddit_response = AsyncMock()
+    mock_subfeddit_response = Mock()
     mock_subfeddit_response.status_code = 200
-    mock_subfeddit_response.json = AsyncMock(return_value=valid_subfeddit)
+    mock_subfeddit_response.json.return_value = valid_subfeddit
     mock_subfeddit_response.raise_for_status = Mock()
 
     mock_get.return_value = mock_subfeddit_response

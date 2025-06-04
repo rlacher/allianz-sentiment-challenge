@@ -100,7 +100,7 @@ async def _fetch_subfeddits(client: AsyncClient) -> list:
     try:
         response = await client.get(url)
         response.raise_for_status()
-        data = await response.json()
+        data = response.json()
         subfeddits = data.get('subfeddits', [])
 
         logger.info(f"Fetched {len(subfeddits)} subfeddits")
@@ -180,7 +180,7 @@ async def _fetch_all_comments_lazy(
         try:
             response = await client.get(url, params=params)
             response.raise_for_status()
-            data = await response.json()
+            data = response.json()
             comment_page = data.get('comments', [])
             num_comments = len(comment_page)
 

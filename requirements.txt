@@ -5,5 +5,5 @@ flake8
 vaderSentiment
 pytest
 pytest-cov
-httpx
 pytest-asyncio
+httpx
