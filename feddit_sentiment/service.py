@@ -5,10 +5,11 @@
 Encompasses the API's business logic: Fetch comments from Feddit,
 comment processing and sentiment classification.
 """
+from json import JSONDecodeError
 import logging
 import requests
 from requests.exceptions import RequestException
-from json import JSONDecodeError
+from sys import maxsize as MAXSIZE
 
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
@@ -27,16 +28,20 @@ logger = logging.getLogger(__name__)
 
 def get_enriched_comments(
         subfeddit_title: str,
+        polarity_sort: SortOrder | None,
+        time_from: int | None,
+        time_to: int | None,
         limit: int,
-        polarity_sort: SortOrder | None = None
 ) -> tuple[list[dict], int]:
     """Fetches, enriches and optionally sorts comments from a subfeddit.
 
     Args:
         subfeddit_title: The subfeddit's title.
+        polarity_sort: Polarity sort order applied to the
+        most recent comments or None for no sorting.
+        time_from: UNIX timestamp to filter comments from a specific time.
+        time_to: UNIX timestamp to filter comments up to a specific time.
         limit: The maximum number of comments to return.
-        polarity_sort: Optional polarity sort order applied to the
-        most recent comments.
     Returns:
         A list of enriched comments with sentiment polarity and label.
     Raises:
@@ -57,6 +62,12 @@ def get_enriched_comments(
 
     # Order comments by most recent first
     raw_comments.sort(key=lambda c: c["created_at"], reverse=True)
+    # Filter comments by time range
+    raw_comments = _filter_comments_by_time(
+        raw_comments,
+        time_from,
+        time_to
+    )
 
     enriched_comments = _enrich_comments(raw_comments[:limit])
 
@@ -308,3 +319,37 @@ def _sort_comments_by_polarity(
     )
 
     return sorted_comments
+
+
+def _filter_comments_by_time(
+    comments: list[dict],
+    time_from: int | None,
+    time_to: int | None
+) -> list[dict]:
+    """Filters comments by a time range.
+
+    Args:
+        comments: List of enriched comments.
+        time_from: UNIX timestamp to filter from or None for no lower bound.
+        time_to: UNIX timestamp to filter up to or None for no upper bound.
+    Returns:
+        A new list of comments filtered by the specified time range.
+    """
+    if time_from is None and time_to is None:
+        return comments
+    elif time_from is None:
+        time_from = 0
+    elif time_to is None:
+        time_to = MAXSIZE
+
+    filtered_comments = [
+        c for c in comments
+        if c["created_at"] >= time_from and c["created_at"] < time_to
+    ]
+
+    logger.info(
+        f"Filtered {len(comments)} comments to {len(filtered_comments)} "
+        f"by time range ({time_from}, {time_to})"
+    )
+
+    return filtered_comments

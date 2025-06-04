@@ -10,6 +10,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    status
 )
 from feddit_sentiment.config import API_VERSION
 from feddit_sentiment import service
@@ -29,8 +30,8 @@ def get_comments_sentiment(params: CommentQueryParams = Depends()) -> dict:
     Delegates to high-level service layer function `get_enriched_comments()`.
 
     Args:
-        params: Query parameters including subfeddit title and optional
-        polarity sort order.
+        params: Query parameters including subfeddit title, optional
+        polarity sort order and optional time range.
     Returns:
         A structured dictionary containing subfeddit metadata, sorting info,
         and sentiment-labelled comments.
@@ -44,19 +45,26 @@ def get_comments_sentiment(params: CommentQueryParams = Depends()) -> dict:
         enriched_comments, subfeddit_id = \
             service.get_enriched_comments(
                 params.subfeddit_title,
-                COMMENT_LIMIT,
-                params.polarity_sort_order
+                params.polarity_sort_order,
+                params.time_from,
+                params.time_to,
+                COMMENT_LIMIT
             )
     except ValueError as value_error:
         logger.warning(
             f"Enriching comments failed in service layer with: {value_error}"
         )
-        raise HTTPException(status_code=404, detail=str(value_error))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(value_error)
+        )
 
     return _format_output(
         subfeddit_id,
         params.subfeddit_title,
         params.polarity_sort_order,
+        params.time_from,
+        params.time_to,
         enriched_comments
     )
 
@@ -65,6 +73,8 @@ def _format_output(
         subfeddit_id: int,
         subfeddit_title: str,
         polarity_sort: SortOrder | None,
+        time_from: int | None,
+        time_to: int | None,
         enriched_comments: list[dict]
 ) -> dict:
     """Maps meta and comment data into output dictionary.
@@ -73,32 +83,55 @@ def _format_output(
         subfeddit_id: The subfeddit's unique id.
         subfeddit_title: The subfeddit's title.
         polarity_sort: Sort order for polarity scores or None.
+        time_from: Optional UNIX timestamp to filter comments from a
+        specific time.
+        time_to: Optional UNIX timestamp to filter comments up to a
+        specific time.
         enriched_comments: A list of comments, each with a polarity score
         and sentiment label.
     Returns:
         A structured dictionary containing subfeddit metadata, sorting info,
         and sentiment-labelled comments.
     Raises:
-        TypeError: If any of the input parameters are of the wrong type.
+        TypeError: If `enriched_comments` is not a list of
+        dictionaries.
     """
-    if not isinstance(subfeddit_id, int):
-        raise TypeError("Subfeddit ID must be of type int")
-    if not isinstance(subfeddit_title, str):
-        raise TypeError("Subfeddit title must be of type string")
-    if not isinstance(polarity_sort, (SortOrder, type(None))):
-        raise TypeError("Polarity sort must be of type SortOrder or None")
     if not isinstance(enriched_comments, list):
-        raise TypeError("Enriched comments must be of type list")
+        raise TypeError(
+            "enriched_comments must be of type list"
+        )
+    elif not all(isinstance(c, dict) for c in enriched_comments):
+        raise TypeError(
+            "enriched_comments must be a list of dictionaries"
+        )
 
-    return {
+    # Construct filter dictionary only if time filters are provided
+    filter_info = None
+    if time_from is not None or time_to is not None:
+        filter_info = {}
+        if time_from is not None:
+            filter_info["time_from"] = time_from
+        if time_to is not None:
+            filter_info["time_to"] = time_to
+    else:
+        filter_info = "None"
+
+    # Sort metadata
+    sort_info = {
+        "key": "polarity" if polarity_sort is not None else "created_at",
+        "order": "asc" if polarity_sort == SortOrder.asc else "desc"
+    }
+
+    # Build final structured output
+    output = {
         "subfeddit": {
             "id": subfeddit_id,
             "title": subfeddit_title
         },
         "comment_count": len(enriched_comments),
-        "sort": {
-            "key": "polarity" if polarity_sort else "created_at",
-            "order": "asc" if polarity_sort == SortOrder.asc else "desc"
-        },
+        "filter": filter_info,
+        "sort": sort_info,
         "comments": enriched_comments
     }
+
+    return output

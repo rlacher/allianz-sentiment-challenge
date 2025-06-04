@@ -11,14 +11,15 @@ A FastAPI microservice exposing sentiment analysis on user comments from a mock 
 
 ## Key Features
 
-- **Fetch Comments:** Retrieves the 25 most recent comments from a specified subfeddit, optionally sorted by polarity.
+- **Retrieve Comments:** Fetches the 25 most recent comments from a chosen subfeddit.
 - **Analyse Sentiment:** Classifies comments as *positive* or *negative* using a sentiment model.
-- **Structured Output:** Returns comment text, polarity scores and sentiment labels in JSON format.
-- **FastAPI-Based:** Built with a lightweight, high-performance RESTful API framework.
+- **Structured Output:** Delivers clear, well-formatted JSON responses with sentiment data.
+- **Filtering & Sorting:** Filters comments by time and sorts by polarity or date for tailored results.
+- **FastAPI-Based:** Built with a lightweight, high-performance RESTful API framework for scalability.
 - **Modular Design:** Separates routing and service logic for clarity and testability.
-- **Containerised Setup:** Easily reproducible, isolated setup using Docker Compose.
+- **Containerised Setup:** Provides a consistent, reproducible setup using Docker Compose.
 - **Automated Tests:** Includes unit and integration tests to strengthen API resilience.
-- **CI Integration:** Runs linting and tests automatically on every commit for code quality assurance.
+- **CI Integration:** Automates linting and testing on every commit, reinforcing code quality.
 
 ## Run with Docker (Recommended)
 
@@ -64,10 +65,18 @@ uvicorn main:app --reload
 Once running, the API is available at: `http://localhost:8000`.
 The service exposes a single GET endpoint at `/api/v1/comments`.
 
-### Example Request
+### Query Parameterisation
 
-Provide the query parameter `subfeddit_title` to specify the source (e.g. `Dummy Topic 1`). 
-Optionally, add `polarity_sort_order` (`asc` or `desc`) to sort comments by sentiment polarity.
+Provide `subfeddit_title` to specify the source (e.g. `Dummy Topic 1`).
+
+Optionally:
+- **Sort by Polarity:** Use `polarity_sort_order` (`asc` or `desc`).  
+- **Filter by Time Range:**  
+  - `time_from` excludes older comments before a specific timestamp.  
+  - `time_to` excludes newer comments beyond a specific timestamp.  
+  - Combine both to retrieve comments within a defined range.  
+
+### Example Request
 
 ```bash
 curl -X GET "http://localhost:8000/api/v1/comments?subfeddit_title=Dummy%20Topic%201"
@@ -82,6 +91,7 @@ curl -X GET "http://localhost:8000/api/v1/comments?subfeddit_title=Dummy%20Topic
     "title": "Dummy Topic 1"
   },
   "comment_count": 25,
+  "filter": "None",
   "sort": {
     "key": "created_at",
     "order": "desc"

@@ -42,6 +42,7 @@ def test_get_comments_sentiment_happy_path(
     assert response == {
         "subfeddit": {"id": subfeddit_id, "title": subfeddit_title},
         "comment_count": len(sample_enriched_comments),
+        "filter": "None",
         "sort": {"key": "created_at", "order": "desc"},
         "comments": sample_enriched_comments
     }
@@ -72,6 +73,40 @@ def test_get_comments_sentiment_with_polarity_sort(
     }
     assert response["comment_count"] == len(sample_enriched_comments)
     assert response["sort"] == {"key": "polarity", "order": sort_order}
+    assert response["comments"] == sample_enriched_comments
+
+
+@patch("feddit_sentiment.service.get_enriched_comments")
+def test_get_comments_sentiment_with_time_range(
+    mock_get_enriched_comments,
+    sample_enriched_comments
+):
+    """Ensures response correctly reflects applied time range filtering."""
+    subfeddit_title = "TechNews"
+    subfeddit_id = 1
+    time_from = 1717392000  # Excludes earlier comments
+    time_to = 1717395600  # Includes comments up to this timestamp
+
+    mock_get_enriched_comments.return_value = (
+        sample_enriched_comments, subfeddit_id
+    )
+
+    query = CommentQueryParams(
+        subfeddit_title=subfeddit_title,
+        time_from=time_from,
+        time_to=time_to
+    )
+    response = get_comments_sentiment(query)
+
+    assert response["subfeddit"] == {
+        "id": subfeddit_id,
+        "title": subfeddit_title
+    }
+    assert response["comment_count"] == len(sample_enriched_comments)
+    assert response["filter"] == {
+        "time_from": time_from,
+        "time_to": time_to
+    }, "Expected filter metadata to match time range params"
     assert response["comments"] == sample_enriched_comments
 
 

@@ -181,6 +181,71 @@ def test_valid_subfeddit_sorted_by_polarity_asc(
 
 
 @patch("feddit_sentiment.service.requests.get")
+def test_comments_filtered_by_time_range(
+    mock_get: Mock,
+    client: TestClient,
+    subfeddit_title: str,
+    valid_subfeddit: dict,
+    valid_comments: dict
+):
+    """Should return only comments within the specified time range."""
+    # Mock /subfeddits response
+    mock_subfeddits_response = Mock()
+    mock_subfeddits_response.raise_for_status.return_value = None
+    mock_subfeddits_response.json.return_value = valid_subfeddit
+
+    # Mock /comments response
+    mock_comments_response = Mock()
+    mock_comments_response.raise_for_status.return_value = None
+    mock_comments_response.json.return_value = valid_comments
+
+    mock_get.side_effect = [
+        mock_subfeddits_response,
+        mock_comments_response
+    ]
+
+    # Define time range to exclude the first comment (created_at: 1748857600)
+    time_from = 1748857610  # Should exclude the first comment
+    time_to = 1748857621  # Should include the last two comments
+
+    response = client.get(
+        f"/api/{API_VERSION}/comments",
+        params={
+            "subfeddit_title": subfeddit_title,
+            "time_from": time_from,
+            "time_to": time_to
+        }
+    )
+
+    assert mock_get.call_count == 2, \
+        "Expected two calls: one for subfeddits, one for comments"
+
+    assert response.status_code == 200, "Expected 200 OK from endpoint"
+    data = response.json()
+    comments = data["comments"]
+
+    assert data["comment_count"] == 2, \
+        "Expected only 2 comments within the specified time range"
+    assert len(comments) == data["comment_count"], \
+        "Expected comment count to match length of comments list"
+
+    # Ensure only expected comments are present
+    expected_comment_ids = {102, 103}  # IDs expected in filtered results
+    actual_comment_ids = {comment["id"] for comment in comments}
+
+    assert actual_comment_ids == expected_comment_ids, \
+        f"Expected comments with IDs {expected_comment_ids}, " \
+        f"but got {actual_comment_ids}"
+
+    # Ensure comments are sorted in descending order by default
+    for i in range(len(comments) - 1):
+        curr_created_at = comments[i]["created_at"]
+        next_created_at = comments[i + 1]["created_at"]
+        assert curr_created_at >= next_created_at, \
+            f"Comments not sorted in descending order at index {i}"
+
+
+@patch("feddit_sentiment.service.requests.get")
 def test_subfeddit_with_no_comments_returns_empty_list(
     mock_get: Mock,
     client: TestClient,
