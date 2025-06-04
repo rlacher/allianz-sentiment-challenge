@@ -4,7 +4,7 @@
 from fastapi import FastAPI
 import uvicorn
 
-from feddit_sentiment.core_service import router
+from feddit_sentiment.routes import router
 from feddit_sentiment.config import (
     APP_VERSION,
     API_HOST,
