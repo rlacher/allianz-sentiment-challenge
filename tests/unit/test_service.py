@@ -2,12 +2,17 @@
 # Copyright (c) 2025 René Lacher
 
 import pytest
-from unittest.mock import patch
+from unittest.mock import (
+    ANY,
+    AsyncMock,
+    patch
+)
 
 from feddit_sentiment.service import get_enriched_comments
 from feddit_sentiment.schemas import SortOrder
 
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "subfeddit_title, polarity_sort, time_from, time_to, limit",
     [
@@ -15,11 +20,14 @@ from feddit_sentiment.schemas import SortOrder
         ("TechNews", SortOrder.asc, None, None, 5),
     ],
 )
-@patch("feddit_sentiment.service._fetch_subfeddits")
+@patch("feddit_sentiment.service._fetch_subfeddits", new_callable=AsyncMock)
 @patch("feddit_sentiment.service._find_subfeddit_id")
-@patch("feddit_sentiment.service._fetch_all_comments_exhaustively")
+@patch(
+    "feddit_sentiment.service._fetch_all_comments_lazy",
+    new_callable=AsyncMock
+)
 @patch("feddit_sentiment.service._enrich_comments")
-def test_get_enriched_comments_calls_internal_functions(
+async def test_get_enriched_comments_calls_internal_functions(
     mock_enrich_comments,
     mock_fetch_comments,
     mock_find_subfeddit_id,
@@ -36,24 +44,22 @@ def test_get_enriched_comments_calls_internal_functions(
     mock_fetch_comments.return_value = []
     mock_enrich_comments.return_value = []
 
-    get_enriched_comments(
+    await get_enriched_comments(
         subfeddit_title, polarity_sort, time_from, time_to, limit
     )
 
-    mock_fetch_subfeddits.assert_called_once()
+    mock_fetch_subfeddits.assert_awaited_once()
     mock_find_subfeddit_id.assert_called_once_with(
         mock_fetch_subfeddits.return_value, subfeddit_title
     )
-    mock_fetch_comments.assert_called_once_with(1)
+    mock_fetch_comments.assert_awaited_once_with(1, ANY)
     mock_enrich_comments.assert_called_once_with(
         mock_fetch_comments.return_value
     )
 
 
-@patch(
-    "feddit_sentiment.service._fetch_subfeddits",
-    return_value=[{"title": "TechNews", "id": 1}],
-)
+@pytest.mark.asyncio
+@patch("feddit_sentiment.service._fetch_subfeddits", new_callable=AsyncMock)
 @patch("feddit_sentiment.service._find_subfeddit_id", return_value=1)
 @pytest.mark.parametrize(
     "subfeddit_title, limit, exception_type, expected_message",
@@ -63,7 +69,7 @@ def test_get_enriched_comments_calls_internal_functions(
         ("TechNews", -1, ValueError, "Limit must be a positive integer"),
     ],
 )
-def test_get_enriched_comments_invalid_inputs(
+async def test_get_enriched_comments_invalid_inputs(
     mock_fetch_subfeddits,
     mock_find_subfeddit_id,
     subfeddit_title,
@@ -73,6 +79,6 @@ def test_get_enriched_comments_invalid_inputs(
 ):
     """Ensures get_enriched_comments raises exceptions for invalid input."""
     with pytest.raises(exception_type, match=expected_message):
-        get_enriched_comments(
+        await get_enriched_comments(
             subfeddit_title, None, 1748937600, 1748937600, limit
         )

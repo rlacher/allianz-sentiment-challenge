@@ -5,10 +5,13 @@
 Encompasses the API's business logic: Fetch comments from Feddit,
 comment processing and sentiment classification.
 """
+from httpx import (
+    AsyncClient,
+    RequestError,
+    HTTPStatusError
+)
 from json import JSONDecodeError
 import logging
-import requests
-from requests.exceptions import RequestException
 from sys import maxsize as MAXSIZE
 
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
@@ -26,7 +29,7 @@ MAX_COMMENT_PRINT_LENGTH = 30
 logger = logging.getLogger(__name__)
 
 
-def get_enriched_comments(
+async def get_enriched_comments(
         subfeddit_title: str,
         polarity_sort: SortOrder | None,
         time_from: int | None,
@@ -56,9 +59,10 @@ def get_enriched_comments(
     if not isinstance(limit, int) or limit <= 0:
         raise ValueError("Limit must be a positive integer")
 
-    subfeddits = _fetch_subfeddits()
-    subfeddit_id = _find_subfeddit_id(subfeddits, subfeddit_title)
-    raw_comments = _fetch_all_comments_exhaustively(subfeddit_id)
+    async with AsyncClient() as client:
+        subfeddits = await _fetch_subfeddits(client)
+        subfeddit_id = _find_subfeddit_id(subfeddits, subfeddit_title)
+        raw_comments = await _fetch_all_comments_lazy(subfeddit_id, client)
 
     # Order comments by most recent first
     raw_comments.sort(key=lambda c: c["created_at"], reverse=True)
@@ -80,9 +84,11 @@ def get_enriched_comments(
     return enriched_comments, subfeddit_id
 
 
-def _fetch_subfeddits() -> list:
+async def _fetch_subfeddits(client: AsyncClient) -> list:
     """Retrieve the list of available subfeddits.
 
+    Args:
+        client: The asynchronous HTTP client to use.
     Returns:
         A list of subfeddits.
     Raises:
@@ -90,17 +96,17 @@ def _fetch_subfeddits() -> list:
         is not valid JSON.
     """
     # Assumes all subfeddits are returned at once
-    url = f"{FEDDIT_BASE_PATH}/subfeddits"
+    url = f"{FEDDIT_BASE_PATH}/subfeddits/"
     try:
-        response = requests.get(url)
+        response = await client.get(url)
         response.raise_for_status()
-        data = response.json()
+        data = await response.json()
         subfeddits = data.get('subfeddits', [])
 
         logger.info(f"Fetched {len(subfeddits)} subfeddits")
 
         return subfeddits
-    except RequestException as request_exception:
+    except (RequestError, HTTPStatusError) as request_exception:
         logger.warning("Failed to get subfeddits", exc_info=True)
         raise ValueError("Failed to get subfeddits") from request_exception
     except JSONDecodeError as json_error:
@@ -137,16 +143,20 @@ def _find_subfeddit_id(
     raise ValueError(f"Subfeddit '{subfeddit_title}' not found.")
 
 
-def _fetch_all_comments_exhaustively(subfeddit_id: int) -> list:
-    """Exhaustively fetches all comments from subfeddit by id.
+async def _fetch_all_comments_lazy(
+        subfeddit_id: int,
+        client: AsyncClient
+) -> list:
+    """Fetch all comments for a given subfeddit using lazy pagination.
 
     Paginates to retrieve all comments from the Feddit API that only
     supports `limit` and `skip` query parameters.
 
     Args:
         subfeddit_id: The subfeddit's id.
+        client: The asynchronous HTTP client to use.
     Returns:
-        A list of all comments for the subfeddit.
+        A list of comment dictionaries for the subfeddit.
     Raises:
         TypeError: If subfeddit_id is not an integer.
         ValueError: If the HTTP request fails or if the API response body
@@ -155,25 +165,24 @@ def _fetch_all_comments_exhaustively(subfeddit_id: int) -> list:
     if not isinstance(subfeddit_id, int):
         raise TypeError("Subfeddit ID must be of type int")
 
+    url = f"{FEDDIT_BASE_PATH}/comments/"
+
     # Built-in list has O(1) resize/append complexity
     all_comments = []
     skip_offset = 0
 
-    url = f"{FEDDIT_BASE_PATH}/comments"
-    params = {
-        "subfeddit_id": subfeddit_id,
-        "limit": COMMENTS_PER_REQUEST
-    }
-
     while True:
+        params = {
+            "subfeddit_id": subfeddit_id,
+            "limit": COMMENTS_PER_REQUEST,
+            "skip": skip_offset
+        }
         try:
-            params["skip"] = skip_offset
-            response = requests.get(url, params)
-
+            response = await client.get(url, params=params)
             response.raise_for_status()
-            data = response.json()
-            comments = data.get('comments', [])
-            num_comments = len(comments)
+            data = await response.json()
+            comment_page = data.get('comments', [])
+            num_comments = len(comment_page)
 
             logger.debug(
                 f"Fetched {num_comments} comments "
@@ -181,28 +190,26 @@ def _fetch_all_comments_exhaustively(subfeddit_id: int) -> list:
                 f"skipping {skip_offset}"
             )
 
-            all_comments.extend(comments)
-
-            if num_comments < COMMENTS_PER_REQUEST:
-                logger.info(
-                    f"Fetched all {len(all_comments)} comments "
-                    f"for subfeddit with id {subfeddit_id}"
-                )
-                break
-            else:
-                skip_offset += COMMENTS_PER_REQUEST
-
-        except RequestException as request_exception:
-            logger.warning("Failed to get comments", exc_info=True)
-            raise ValueError("Failed to get comments") from request_exception
-        except JSONDecodeError as json_error:
+        except (RequestError, HTTPStatusError) as request_error:
             logger.warning(
-                "Invalid JSON response for comments",
+                f"Failed to fetch comments at skip: {skip_offset}",
                 exc_info=True
             )
-            raise ValueError(
-                "Invalid JSON response for comments"
-            ) from json_error
+            raise ValueError("Failed to fetch comments") from request_error
+        except JSONDecodeError as json_error:
+            logger.warning("Invalid JSON for comment page", exc_info=True)
+            raise ValueError("Invalid JSON for comment page") from json_error
+
+        all_comments.extend(comment_page)
+
+        if not comment_page or len(comment_page) < COMMENTS_PER_REQUEST:
+            logger.info(
+                f"Fetched all {len(all_comments)} comments "
+                f"for subfeddit with id {subfeddit_id}"
+            )
+            break
+
+        skip_offset += COMMENTS_PER_REQUEST
 
     return all_comments
 

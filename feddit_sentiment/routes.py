@@ -24,7 +24,9 @@ router = APIRouter()
 
 
 @router.get(f"{BASE_PATH}/comments")
-def get_comments_sentiment(params: CommentQueryParams = Depends()) -> dict:
+async def get_comments_sentiment(
+    params: CommentQueryParams = Depends()
+) -> dict:
     """Fetch and analyse comments from the given subfeddit.
 
     Delegates to high-level service layer function `get_enriched_comments()`.
@@ -43,7 +45,7 @@ def get_comments_sentiment(params: CommentQueryParams = Depends()) -> dict:
 
     try:
         enriched_comments, subfeddit_id = \
-            service.get_enriched_comments(
+            await service.get_enriched_comments(
                 params.subfeddit_title,
                 params.polarity_sort_order,
                 params.time_from,

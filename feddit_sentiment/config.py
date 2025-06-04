@@ -5,7 +5,7 @@ from os import getenv
 
 # Versioning
 API_VERSION = "v1"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.1.0"
 
 # Default settings
 DEFAULT_HOST = "0.0.0.0"

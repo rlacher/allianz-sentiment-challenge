@@ -21,11 +21,12 @@ def sample_enriched_comments():
     ]
 
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize("subfeddit_title, subfeddit_id", [
     ("TechNews", 1),
 ])
 @patch("feddit_sentiment.service.get_enriched_comments")
-def test_get_comments_sentiment_happy_path(
+async def test_get_comments_sentiment_happy_path(
     mock_get_enriched_comments,
     subfeddit_title,
     subfeddit_id,
@@ -37,7 +38,7 @@ def test_get_comments_sentiment_happy_path(
     )
 
     query = CommentQueryParams(subfeddit_title=subfeddit_title)
-    response = get_comments_sentiment(query)
+    response = await get_comments_sentiment(query)
 
     assert response == {
         "subfeddit": {"id": subfeddit_id, "title": subfeddit_title},
@@ -48,8 +49,9 @@ def test_get_comments_sentiment_happy_path(
     }
 
 
+@pytest.mark.asyncio
 @patch("feddit_sentiment.service.get_enriched_comments")
-def test_get_comments_sentiment_with_polarity_sort(
+async def test_get_comments_sentiment_with_polarity_sort(
     mock_get_enriched_comments,
     sample_enriched_comments
 ):
@@ -65,7 +67,7 @@ def test_get_comments_sentiment_with_polarity_sort(
         subfeddit_title=subfeddit_title,
         polarity_sort_order=sort_order
     )
-    response = get_comments_sentiment(query)
+    response = await get_comments_sentiment(query)
 
     assert response["subfeddit"] == {
         "id": subfeddit_id,
@@ -76,8 +78,9 @@ def test_get_comments_sentiment_with_polarity_sort(
     assert response["comments"] == sample_enriched_comments
 
 
+@pytest.mark.asyncio
 @patch("feddit_sentiment.service.get_enriched_comments")
-def test_get_comments_sentiment_with_time_range(
+async def test_get_comments_sentiment_with_time_range(
     mock_get_enriched_comments,
     sample_enriched_comments
 ):
@@ -96,7 +99,7 @@ def test_get_comments_sentiment_with_time_range(
         time_from=time_from,
         time_to=time_to
     )
-    response = get_comments_sentiment(query)
+    response = await get_comments_sentiment(query)
 
     assert response["subfeddit"] == {
         "id": subfeddit_id,
@@ -110,20 +113,21 @@ def test_get_comments_sentiment_with_time_range(
     assert response["comments"] == sample_enriched_comments
 
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize("exception_message", [
     "Subfeddit 'TechNews' not found.",
     "Invalid JSON response for subfeddits",
 ])
 @patch("feddit_sentiment.service.get_enriched_comments")
-def test_get_comments_sentiment_subfeddit_not_found(
+async def test_get_comments_sentiment_subfeddit_not_found(
     mock_get_enriched_comments, exception_message
 ):
     """Ensures get_comments_sentiment raises a 404 HTTPException."""
     mock_get_enriched_comments.side_effect = ValueError(exception_message)
 
+    query = CommentQueryParams(subfeddit_title="TechNews")
     with pytest.raises(HTTPException) as exc_info:
-        query = CommentQueryParams(subfeddit_title="TechNews")
-        get_comments_sentiment(query)
+        await get_comments_sentiment(query)
 
     assert exc_info.value.status_code == 404
     assert exception_message in str(exc_info.value.detail)

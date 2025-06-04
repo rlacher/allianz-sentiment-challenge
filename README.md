@@ -16,6 +16,7 @@ A FastAPI microservice exposing sentiment analysis on user comments from a mock 
 - **Structured Output:** Delivers clear, well-formatted JSON responses with sentiment data.
 - **Filtering & Sorting:** Filters comments by time and sorts by polarity or date for tailored results.
 - **FastAPI-Based:** Built with a lightweight, high-performance RESTful API framework for scalability.
+- **Asynchronous Requests:** Uses async HTTP calls for concurrent fetches, improving response times.
 - **Modular Design:** Separates routing and service logic for clarity and testability.
 - **Containerised Setup:** Provides a consistent, reproducible setup using Docker Compose.
 - **Automated Tests:** Includes unit and integration tests to strengthen API resilience.
@@ -138,7 +139,7 @@ The report shows statement and branch coverage.
 ## Technical Notes
 
 The API returns the 25 most recent comments as required.
-Internally, all comments are fetched via paginated requests to ensure complete data retrieval.
+Internally, all comments are retrieved exhaustively through lazy pagination, optimising resource usage for large datasets.
 Comments are sorted by `created_at` in descending order before limiting the output.
 
 ## License
