@@ -36,21 +36,21 @@ async def get_enriched_comments(
         time_to: int | None,
         limit: int,
 ) -> tuple[list[dict], int]:
-    """Fetches, enriches and optionally sorts comments from a subfeddit.
+    """Fetch, optionally filter/sort, and enrich comments from a subfeddit.
 
     Args:
         subfeddit_title: The subfeddit's title.
         polarity_sort: Polarity sort order applied to the
         most recent comments or None for no sorting.
-        time_from: UNIX timestamp to filter comments from a specific time.
-        time_to: UNIX timestamp to filter comments up to a specific time.
+        time_from: UNIX timestamp to filter comments from (inclusive).
+        time_to: UNIX timestamp to filter comments before (exclusive).
         limit: The maximum number of comments to return.
     Returns:
         A list of enriched comments with sentiment polarity and label.
     Raises:
-        TypeError: If the subfeddit title is not a string.
-        ValueError: If the subfeddit title is blank or if the limit is
-        not a positive integer.
+        TypeError: If `subfeddit_title` is not a string.
+        ValueError: If `subfeddit_title` is blank or if `limit` is not
+        a positive integer.
     """
     if not isinstance(subfeddit_title, str):
         raise TypeError("Subfeddit title must be of type str")
@@ -158,7 +158,7 @@ async def _fetch_all_comments_lazy(
     Returns:
         A list of comment dictionaries for the subfeddit.
     Raises:
-        TypeError: If subfeddit_id is not an integer.
+        TypeError: If `subfeddit_id` is not an integer.
         ValueError: If the HTTP request fails or if the API response body
         is not valid JSON.
     """
@@ -265,7 +265,11 @@ def _enrich_comments(comments: list) -> list:
 
 
 def _get_analyser() -> SentimentIntensityAnalyzer:
-    """Provides a reusable SentimentIntensityAnalyzer instance."""
+    """Provides a reusable SentimentIntensityAnalyzer instance.
+
+    Returns:
+        A SentimentIntensityAnalyzer instance.
+    """
     return SentimentIntensityAnalyzer()
 
 
@@ -276,8 +280,8 @@ def _analyse_comment(
     """Analyses the sentiment of a comment.
 
     Args:
-        analyser: The sentiment analyser instance.
         comment_text: The comment's raw text to analyse.
+        analyser: The sentiment analyser instance.
     Returns:
         A polarity score from -1 to 1.
     Raises:

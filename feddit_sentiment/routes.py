@@ -38,8 +38,7 @@ async def get_comments_sentiment(
         A structured dictionary containing subfeddit metadata, sorting info,
         and sentiment-labelled comments.
     Raises:
-        HTTPException: If the subfeddit does not exist
-        (implied by service layer).
+        HTTPException: If the subfeddit does not exist.
     """
     logger.info(f"Received request parameters: {params}")
 
@@ -85,10 +84,8 @@ def _format_output(
         subfeddit_id: The subfeddit's unique id.
         subfeddit_title: The subfeddit's title.
         polarity_sort: Sort order for polarity scores or None.
-        time_from: Optional UNIX timestamp to filter comments from a
-        specific time.
-        time_to: Optional UNIX timestamp to filter comments up to a
-        specific time.
+        time_from: Optional UNIX timestamp to filter comments from this time.
+        time_to: Optional UNIX timestamp to filter comments up to this time.
         enriched_comments: A list of comments, each with a polarity score
         and sentiment label.
     Returns:

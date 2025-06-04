@@ -39,11 +39,11 @@ class CommentQueryParams(BaseModel):
         Args:
             time_to: The end of the time range.
             info: Context information containing the data being validated,
-            including time_from.
+            including `time_from`.
         Returns:
-            The validated time_to value.
+            The validated `time_to` value.
         Raises:
-            HTTPException: If time_to is less than time_from.
+            HTTPException: If `time_to` is less than `time_from`.
         """
         time_from = info.data["time_from"]
         if (
